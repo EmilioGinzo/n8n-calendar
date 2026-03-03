@@ -1,0 +1,66 @@
+{
+  "id": "gcal-complete",
+  "name": "Google Calendar Complete",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-complete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [256, 304],
+      "id": "webhook-complete",
+      "webhookId": "create-complete"
+    },
+    {
+      "parameters": {
+        "calendar": "primary",
+        "start": "={{ $json.body?.start || $json.start }}",
+        "end": "={{ $json.body?.end || $json.end }}",
+        "additionalFields": {
+          "summary": "={{ $json.body?.summary || $json.summary }}",
+          "description": "={{ $json.body?.description || $json.description }}"
+        }
+      },
+      "name": "Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [464, 304],
+      "id": "gcal-complete-node",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "D7ACxhyvOGvmbbFS",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [656, 304],
+      "id": "response-complete"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Create Event", "type": "main", "index": 0}]]
+    },
+    "Create Event": {
+      "main": [[{"node": "Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}

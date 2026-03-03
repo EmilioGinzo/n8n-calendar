@@ -1,0 +1,42 @@
+{
+  "id": "test-webhook-001",
+  "name": "Test Webhook - Log Only",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-calendar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "test-webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 200],
+      "webhookId": "test-calendar"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true, summary: $json.body?.summary || $json.summary, description: $json.body?.description || $json.description, start: $json.body?.start || $json.start, end: $json.body?.end || $json.end, message: \"Event data received successfully - Ready to create in Google Calendar\" }) }}"
+      },
+      "id": "test-respond-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [500, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}
