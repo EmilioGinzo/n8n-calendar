@@ -1,0 +1,20 @@
+{
+  "name": "n8n-google-calendar-workflow",
+  "version": "1.0.0",
+  "description": "Automated Google Calendar event creation using n8n workflows with webhook triggers.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "n8n": "^2.10.2",
+    "sqlite3": "^5.1.7"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "id": "gcal-list-events",
+  "name": "List Calendar Events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "= {{ $json.query ? 'GET' : 'POST' }}",
+        "path": "list-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 200],
+      "id": "webhook-list",
+      "webhookId": "list-events"
+    },
+    {
+      "parameters": {
+        "calendar": "={{ $json.query?.calendar || $json.body?.calendar || 'primary' }}",
+        "operation": "getAll",
+        "limit": "={{ $json.query?.limit || $json.body?.limit || 10 }}",
+        "options": {
+          "timeMin": "={{ $json.query?.start || $json.body?.start || $now.minus({days: 7}).toISO() }}",
+          "timeMax": "={{ $json.query?.end || $json.body?.end || $now.plus({days: 30}).toISO() }}",
+          "timeZone": "America/Asuncion",
+          "singleEvents": true,
+          "orderBy": "startTime",
+          "query": "={{ $json.query?.search || $json.body?.search || '' }}"
+        }
+      },
+      "name": "List Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [460, 200],
+      "id": "gcal-list",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "D7ACxhyvOGvmbbFS",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ const events = Array.isArray($json) ? $json : ($json ? [$json] : []); JSON.stringify({ success: true, timezone: 'America/Asuncion', count: events.length, events: events.map(e => ({ id: e.id, summary: e.summary || '(No title)', description: e.description || '', location: e.location || '', start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date, htmlLink: e.htmlLink, status: e.status, created: e.created, updated: e.updated, creator: e.creator?.email || '', organizer: e.organizer?.email || '', attendees: e.attendees?.map(a => ({ email: a.email, displayName: a.displayName || '', responseStatus: a.responseStatus })) || [], recurringEventId: e.recurringEventId || '', hangoutLink: e.hangoutLink || '' })) }) }}"
+      },
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 200],
+      "id": "response-list"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "List Events", "type": "main", "index": 0}]]
+    },
+    "List Events": {
+      "main": [[{"node": "Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}

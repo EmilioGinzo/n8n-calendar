@@ -3,8 +3,7 @@
 ## Prerequisites
 
 1. n8n installed and running
-2. GitHub CLI (`gh`) installed and authenticated
-3. Google Cloud account
+2. Google Cloud account
 
 ## Step 1: n8n Installation
 
@@ -69,21 +68,20 @@ Access n8n at: http://localhost:5678
 ## Step 4: Import Workflows
 
 ```bash
-# Import main workflow
-n8n import:workflow --input=workflows/gcal_paraguay.json
-
-# Import test workflow
+# Import all workflows
+n8n import:workflow --input=workflows/create_event.json
+n8n import:workflow --input=workflows/list_events.json
+n8n import:workflow --input=workflows/get_event.json
 n8n import:workflow --input=workflows/test_webhook.json
 ```
 
 ## Step 5: Activate Workflows
 
 ```bash
-# Activate Paraguay timezone workflow
-n8n publish:workflow --id=gcal-paraguay --active
-
-# Activate test workflow
-n8n publish:workflow --id=test-webhook-001 --active
+# Activate all workflows
+n8n publish:workflow --id=gcal-create-event --active
+n8n publish:workflow --id=gcal-list-events --active
+n8n publish:workflow --id=gcal-get-event --active
 ```
 
 If n8n is running, restart it:
@@ -108,10 +106,10 @@ curl -X POST http://localhost:5678/webhook/test-calendar \
   }'
 ```
 
-### Test Google Calendar Creation
+### Test Create Event
 
 ```bash
-curl -X POST http://localhost:5678/webhook/create-py \
+curl -X POST http://localhost:5678/webhook/create-event \
   -H "Content-Type: application/json" \
   -d '{
     "summary": "My Event",
@@ -119,6 +117,22 @@ curl -X POST http://localhost:5678/webhook/create-py \
     "start": "2026-03-03T16:00:00-03:00",
     "end": "2026-03-03T16:30:00-03:00"
   }'
+```
+
+### Test List Events
+
+```bash
+# Default (last 7 days to next 30 days)
+curl http://localhost:5678/webhook/list-events
+
+# With date range and search
+curl "http://localhost:5678/webhook/list-events?start=2026-03-01T00:00:00-03:00&end=2026-03-31T23:59:59-03:00&limit=20&search=meeting"
+```
+
+### Test Get Event by ID
+
+```bash
+curl "http://localhost:5678/webhook/get-event?eventId=your_event_id_here"
 ```
 
 ## Troubleshooting
@@ -140,6 +154,15 @@ curl -X POST http://localhost:5678/webhook/create-py \
 Include timezone offset in datetime:
 - Paraguay (UTC-3): `2026-03-03T16:00:00-03:00`
 - UTC: `2026-03-03T19:00:00Z`
+
+## API Endpoints Summary
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/webhook/create-event` | POST | Create a new calendar event |
+| `/webhook/list-events` | GET/POST | List/search events |
+| `/webhook/get-event` | GET | Get event by ID |
+| `/webhook/test-calendar` | POST | Test webhook (no auth) |
 
 ## Additional Resources
 

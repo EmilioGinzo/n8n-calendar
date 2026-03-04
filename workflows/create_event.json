@@ -1,0 +1,132 @@
+{
+  "id": "gcal-create-event",
+  "name": "Create Calendar Event",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 200],
+      "id": "webhook-create",
+      "webhookId": "create-event"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate required parameters\nconst body = $json.body || $json;\nconst summary = body.summary;\nconst start = body.start;\nconst end = body.end;\n\nconst missing = [];\nif (!summary) missing.push('summary');\nif (!start) missing.push('start');\nif (!end) missing.push('end');\n\nif (missing.length > 0) {\n  return [{\n    json: {\n      error: true,\n      code: 'MISSING_REQUIRED_FIELDS',\n      message: `Missing required fields: ${missing.join(', ')}`,\n      missing: missing\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    summary: summary,\n    description: body.description || '',\n    start: start,\n    end: end,\n    location: body.location || '',\n    calendar: body.calendar || 'primary',\n    attendees: body.attendees || []\n  }\n}];"
+      },
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 200],
+      "id": "validate-create"
+    },
+    {
+      "parameters": {
+        "calendar": "={{ $json.calendar }}",
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "options": {
+          "timeZone": "America/Asuncion"
+        },
+        "additionalFields": {
+          "summary": "={{ $json.summary }}",
+          "description": "={{ $json.description }}",
+          "location": "={{ $json.location }}",
+          "attendees": "={{ $json.attendees }}"
+        }
+      },
+      "name": "Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 200],
+      "id": "gcal-create",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "D7ACxhyvOGvmbbFS",
+          "name": "Google Calendar account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check for Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [940, 200],
+      "id": "check-create-error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "statusCode": "=400",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.message || $json.error || 'Failed to create event', code: $json.code || 'CREATE_FAILED' }) }}"
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1180, 100],
+      "id": "create-error-response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ const e = $json; JSON.stringify({ success: true, message: 'Event created successfully', timezone: 'America/Asuncion', event: { id: e.id, summary: e.summary, description: e.description || '', location: e.location || '', start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date, htmlLink: e.htmlLink, status: e.status, created: e.created, updated: e.updated, creator: e.creator?.email || '', attendees: e.attendees?.map(a => ({ email: a.email, responseStatus: a.responseStatus })) || [] } }) }}"
+      },
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1180, 300],
+      "id": "create-success-response"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Validate Input", "type": "main", "index": 0}]]
+    },
+    "Validate Input": {
+      "main": [[{"node": "Create Event", "type": "main", "index": 0}]]
+    },
+    "Create Event": {
+      "main": [[{"node": "Check for Error", "type": "main", "index": 0}]]
+    },
+    "Check for Error": {
+      "main": [
+        [{"node": "Error Response", "type": "main", "index": 0}],
+        [{"node": "Success Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}

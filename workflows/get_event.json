@@ -1,0 +1,126 @@
+{
+  "id": "gcal-get-event",
+  "name": "Get Calendar Event",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "get-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 200],
+      "id": "webhook-get",
+      "webhookId": "get-event"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate required parameters\nconst eventId = $json.query?.eventId || $json.query?.id || $json.body?.eventId || $json.body?.id;\nconst calendar = $json.query?.calendar || $json.body?.calendar || 'primary';\n\nif (!eventId) {\n  return [{\n    json: {\n      error: true,\n      code: 'MISSING_EVENT_ID',\n      message: 'Missing required parameter: eventId or id',\n      example: '/webhook/get-event?eventId=your_event_id_here'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    eventId: eventId,\n    calendar: calendar\n  }\n}];"
+      },
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 200],
+      "id": "validate-input"
+    },
+    {
+      "parameters": {
+        "calendar": "={{ $json.calendar }}",
+        "operation": "get",
+        "eventId": "={{ $json.eventId }}",
+        "options": {
+          "timeZone": "America/Asuncion"
+        }
+      },
+      "name": "Get Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.2,
+      "position": [700, 200],
+      "id": "gcal-get",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "D7ACxhyvOGvmbbFS",
+          "name": "Google Calendar account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check for Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [940, 200],
+      "id": "check-error"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "statusCode": "=400",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.error || 'Event not found', code: $json.code || 'EVENT_NOT_FOUND', message: $json.message || 'The requested event could not be found' }) }}"
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1180, 100],
+      "id": "error-response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ const e = $json; JSON.stringify({ success: true, timezone: 'America/Asuncion', event: { id: e.id, summary: e.summary || '(No title)', description: e.description || '', location: e.location || '', start: e.start?.dateTime || e.start?.date, end: e.end?.dateTime || e.end?.date, htmlLink: e.htmlLink, status: e.status, created: e.created, updated: e.updated, creator: e.creator?.email || '', organizer: e.organizer?.email || '', attendees: e.attendees?.map(a => ({ email: a.email, displayName: a.displayName || '', responseStatus: a.responseStatus })) || [], hangoutLink: e.hangoutLink || '', conferenceData: e.conferenceData ? { conferenceId: e.conferenceData.conferenceId, entryPoints: e.conferenceData.entryPoints?.map(ep => ({ entryPointType: ep.entryPointType, uri: ep.uri, label: ep.label })) } : null, recurringEventId: e.recurringEventId || '', attachments: e.attachments?.map(att => ({ title: att.title, fileUrl: att.fileUrl })) || [], colorId: e.colorId || '', transparency: e.transparency || 'opaque', visibility: e.visibility || 'default' } }) }}"
+      },
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1180, 300],
+      "id": "success-response"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Validate Input", "type": "main", "index": 0}]]
+    },
+    "Validate Input": {
+      "main": [[{"node": "Get Event", "type": "main", "index": 0}]]
+    },
+    "Get Event": {
+      "main": [[{"node": "Check for Error", "type": "main", "index": 0}]]
+    },
+    "Check for Error": {
+      "main": [
+        [{"node": "Error Response", "type": "main", "index": 0}],
+        [{"node": "Success Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}
