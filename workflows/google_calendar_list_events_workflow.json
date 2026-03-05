@@ -1,0 +1,79 @@
+{
+  "id": "gcal-workflow-002",
+  "name": "Google Calendar - List Events",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-node",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "events/list",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 100],
+      "webhookId": "events/list"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "="
+        },
+        "timeMin": "={{ $json.query?.timeMin }}",
+        "timeMax": "={{ $json.query?.timeMax }}",
+        "maxResults": "={{ $json.query?.maxResults || 10 }}"
+      },
+      "id": "google-calendar-getall-node",
+      "name": "Google Calendar - Get Many",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [500, 200],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "",
+          "name": "Google Calendar Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, events: $json, count: Array.isArray($json) ? $json.length : 1, message: 'Events retrieved successfully' }) }}"
+      },
+      "id": "respond-webhook-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [800, 200]
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [[{"node": "Google Calendar - Get Many", "type": "main", "index": 0}]]
+    },
+    "Webhook": {
+      "main": [[{"node": "Google Calendar - Get Many", "type": "main", "index": 0}]]
+    },
+    "Google Calendar - Get Many": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false
+}

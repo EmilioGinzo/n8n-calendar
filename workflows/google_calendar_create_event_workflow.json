@@ -1,0 +1,168 @@
+{
+  "id": "gcal-workflow-001",
+  "name": "Google Calendar - Create Event",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-node",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "events/create",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        100
+      ],
+      "webhookId": "events/create"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst data = input.body || input;\n\nif (!data.start) throw new Error('start is required. Format: 2026-03-06T12:00:00 or 2026-03-06T12:00:00-03:00');\n\nconst startDate = new Date(data.start);\nif (isNaN(startDate.getTime())) throw new Error('Invalid start datetime format');\n\nconst durationMinutes = parseInt(data.duration) || 60;\nconst endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);\n\nreturn [{\n  json: {\n    summary: data.summary || 'New Event',\n    description: data.description || '',\n    location: data.location || '',\n    start: startDate.toISOString(),\n    end: endDate.toISOString()\n  }\n}];"
+      },
+      "id": "process-event-node",
+      "name": "Process Event Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "="
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "summary": "={{ $json.summary }}",
+          "description": "={{ $json.description }}",
+          "location": "={{ $json.location }}"
+        }
+      },
+      "id": "google-calendar-node",
+      "name": "Google Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        100
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "D7ACxhyvOGvmbbFS",
+          "name": "Google Calendar Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, eventId: $json.id, htmlLink: $json.htmlLink, message: 'Event created successfully' } }}"
+      },
+      "id": "respond-webhook-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    summary: 'Team Meeting',\n    description: 'Weekly team sync meeting',\n    location: 'Conference Room A',\n    start: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),\n    duration: 60\n  }\n}];"
+      },
+      "id": "sample-data-node",
+      "name": "Sample Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Event Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Event Data": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Sample Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample Data": {
+      "main": [
+        [
+          {
+            "node": "Process Event Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Asuncion"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": true
+}
